@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { ChevronIcon, GripIcon } from './Icons';
 
 const STORAGE_KEY = 'chord-visualizer.sections.v1';
 
@@ -19,10 +20,16 @@ interface Props {
   /** Controls kept in the header (they don't toggle the section) */
   actions?: ReactNode;
   children: ReactNode;
+  /** Drag-to-reorder wiring (from useSortableSections) */
+  drag?: {
+    onPointerDown: (e: PointerEvent) => void;
+    onKeyDown: (e: KeyboardEvent) => void;
+    isDragging: boolean;
+  };
 }
 
 /** A card with a clickable header that folds its content away. Remembers its state per browser. */
-export function Section({ id, title, summary, actions, children }: Props) {
+export function Section({ id, title, summary, actions, children, drag }: Props) {
   const [open, setOpen] = useState(() => !readFolded()[id]);
   const bodyId = useId();
 
@@ -38,15 +45,29 @@ export function Section({ id, title, summary, actions, children }: Props) {
   }, [id, open]);
 
   return (
-    <section className={`card section${open ? '' : ' folded'}`}>
-      <div className="section-header">
+    <section
+      className={`section section--${id}${open ? '' : ' is-folded'}${drag?.isDragging ? ' is-dragging' : ''}`}
+      data-section-id={id}
+    >
+      <header className="section-head">
+        {drag && (
+          <button
+            className="drag-handle"
+            onPointerDown={drag.onPointerDown}
+            onKeyDown={drag.onKeyDown}
+            aria-label={`Move ${title} section. Drag, or use the up and down arrow keys.`}
+            title="Drag to move this section"
+          >
+            <GripIcon />
+          </button>
+        )}
         <button className="section-toggle" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen(!open)}>
-          <span className="chevron" aria-hidden="true">▸</span>
-          <h3>{title}</h3>
+          <ChevronIcon className="section-chevron" />
+          <span className="section-label">{title}</span>
           {!open && summary && <span className="section-summary">{summary}</span>}
         </button>
         {open && actions && <div className="section-actions">{actions}</div>}
-      </div>
+      </header>
       {open && (
         <div className="section-body" id={bodyId}>
           {children}

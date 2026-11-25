@@ -2,9 +2,19 @@ import { chordNoteName, type Chord } from '../utils/chordParser';
 import { FRET_COUNT, fretboardPositions, TUNINGS, type Tuning } from '../utils/guitarNotes';
 import type { ChordShape } from '../utils/guitarShapes';
 import { playNote } from '../utils/audio';
+import { defaultNoteName } from '../utils/musicTheory';
 
 const FRETS = Array.from({ length: FRET_COUNT + 1 }, (_, i) => i);
 const INLAYS = new Set([3, 5, 7, 9, 12]);
+
+/**
+ * Pearl inlay dots sit between strings: single dots between G and D (rows 2/3
+ * from the top), the double dot at fret 12 between B–G and D–A.
+ */
+function inlayClass(fret: number, row: number) {
+  if (fret === 12) return row === 1 || row === 3 ? ' inlay-below' : '';
+  return INLAYS.has(fret) && row === 2 ? ' inlay-below' : '';
+}
 
 interface Props {
   chord: Chord;
@@ -20,9 +30,9 @@ export function GuitarFretboard({ chord, tuning, shape }: Props) {
 
   return (
     <div>
-      <div className="fretboard-scroll">
+      <div className="fretboard-case">
         <div className="fretboard" style={{ gridTemplateColumns: `2.4rem 3rem repeat(${FRET_COUNT}, minmax(3rem, 1fr))` }}>
-          {stringOrder.map((s) => (
+          {stringOrder.map((s, row) => (
             <div className="string-row" key={s}>
               <div className="string-name">
                 {tuning.labels[s]}
@@ -40,12 +50,16 @@ export function GuitarFretboard({ chord, tuning, shape }: Props) {
                 return (
                   <button
                     key={fret}
-                    className={`fret${fret === 0 ? ' open' : ''}`}
+                    className={`fret${fret === 0 ? ' open' : ''}${inlayClass(fret, row)}`}
                     onClick={() => playNote('guitar', pos.midi)}
-                    aria-label={`String ${tuning.labels[s]}, fret ${fret}${label ? `, ${label}` : ''}`}
+                    aria-label={`String ${tuning.labels[s]}, fret ${fret}, ${label ?? defaultNoteName(pos.pitchClass)}`}
                   >
                     <span className="string-line" style={{ height: `${1 + (5 - s) * 0.35}px` }} />
-                    {label && <span className={`dot${cls}`}>{label}</span>}
+                    {label ? (
+                      <span className={`dot${cls}`}>{label}</span>
+                    ) : (
+                      <span className="ghost-note" aria-hidden="true">{defaultNoteName(pos.pitchClass)}</span>
+                    )}
                   </button>
                 );
               })}

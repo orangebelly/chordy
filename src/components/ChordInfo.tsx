@@ -2,26 +2,29 @@ import type { Chord } from '../utils/chordParser';
 
 export function ChordInfo({ chord }: { chord: Chord }) {
   return (
-    <div className="chord-info">
-      <div className="chord-heading">
-        <h2>{chord.symbol}</h2>
-        <span className="chord-type">{chord.typeName}</span>
+    <div className="chord-hero">
+      <div className="hero-title">
+        <h2 className="hero-symbol">{chord.symbol}</h2>
+        <p className="hero-type">{chord.typeName}</p>
       </div>
-      <ul className="tones">
+      <ol className="hero-tones">
         {chord.tones.map((t) => (
-          <li key={t.interval.symbol} className={`tone${t.isRoot ? ' root' : ''}`}>
-            <span className="tone-note">{t.name}</span>
-            <span className="tone-interval">
-              {t.interval.name} ({t.interval.symbol})
-            </span>
+          <li key={t.interval.symbol} className={`hero-tone${t.isRoot ? ' is-root' : ''}`}>
+            <span className="hero-degree">{t.interval.symbol}</span>
+            <span className="hero-note">{t.name}</span>
+            <span className="hero-interval">{t.interval.name}</span>
           </li>
         ))}
-      </ul>
-      <dl className="summary">
-        <dt>Notes</dt>
-        <dd>{chord.tones.map((t) => t.name).join(' – ')}</dd>
-        <dt>Intervals</dt>
-        <dd>{chord.tones.map((t) => t.interval.symbol).join(' – ')}</dd>
+      </ol>
+      <dl className="hero-formula">
+        <div>
+          <dt>Notes</dt>
+          <dd>{chord.tones.map((t) => t.name).join(' – ')}</dd>
+        </div>
+        <div>
+          <dt>Intervals</dt>
+          <dd>{chord.tones.map((t) => t.interval.symbol).join(' – ')}</dd>
+        </div>
       </dl>
     </div>
   );

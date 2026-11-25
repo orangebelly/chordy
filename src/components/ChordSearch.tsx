@@ -1,3 +1,5 @@
+import { SearchIcon } from './Icons';
+
 const EXAMPLES = ['C', 'Am7', 'G7', 'Dmaj7', 'Fm', 'G9', 'Asus4add9', 'Bbmaj9', 'Bdim7', 'Esus4'];
 
 interface Props {
@@ -12,26 +14,31 @@ export function ChordSearch({ value, error, onChange }: Props) {
       <label htmlFor="chord-input" className="visually-hidden">
         Chord name
       </label>
-      <input
-        id="chord-input"
-        className={`search-input${error ? ' has-error' : ''}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Try Dmaj7, Am7, G7, C"
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-      />
-      <div className="examples">
+      <div className={`field field--search${error ? ' has-error' : ''}`}>
+        <SearchIcon className="field-icon" />
+        <input
+          id="chord-input"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Try Dmaj7, Am7, G7, C"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-invalid={!!error}
+          aria-describedby={error ? 'chord-error' : undefined}
+        />
+      </div>
+      <div className="suggestions">
+        <span className="suggestions-label">Try</span>
         {EXAMPLES.map((ex) => (
-          <button key={ex} className="chip" onClick={() => onChange(ex)}>
+          <button key={ex} className={`suggestion${ex === value.trim() ? ' is-current' : ''}`} onClick={() => onChange(ex)}>
             {ex}
           </button>
         ))}
       </div>
       {error && (
-        <p className="error" role="alert">
+        <p className="error" id="chord-error" role="alert">
           {error}
         </p>
       )}

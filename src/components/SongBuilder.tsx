@@ -2,6 +2,7 @@ import { parseProgression } from '../utils/progression';
 import {
   arrangeAppend, arrangeMove, arrangeRemoveAt, deleteMeasure, updateMeasure, type Song,
 } from '../utils/song';
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, PlayIcon, PlusIcon, StopIcon } from './Icons';
 
 export interface SongPosition {
   slot: number; // index in the arrangement
@@ -31,50 +32,52 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
 
   return (
     <div className="song">
-      <div className="card-header">
+      <div className="song-head">
         <input
           className="song-title"
           value={song.title}
           onChange={(e) => onSongChange({ ...song, title: e.target.value })}
           aria-label="Song title"
         />
-        <button className="btn primary" disabled={!chordCount} onClick={playing ? onStop : () => onPlay()}>
-          {playing ? '■ Stop' : '▶ Play song'}
+        <span className="song-meta">
+          {song.arrangement.length} measure{song.arrangement.length === 1 ? '' : 's'} · {chordCount} chords · {formatTime(seconds)} · {song.bpm} BPM
+        </span>
+        <button className={`btn ${playing ? 'btn--outline' : 'btn--primary'}`} disabled={!chordCount} onClick={playing ? onStop : () => onPlay()}>
+          {playing ? <><StopIcon /> Stop</> : <><PlayIcon /> Play song</>}
         </button>
       </div>
 
-      <h4>
-        Song arrangement{' '}
-        <span className="muted">
-          {song.arrangement.length} measure{song.arrangement.length === 1 ? '' : 's'} · {chordCount} chords · {formatTime(seconds)} at {song.bpm} BPM
-        </span>
-      </h4>
+      <h4 className="subhead">Arrangement</h4>
       {song.arrangement.length === 0 ? (
-        <p className="shape-help">Save a progression as a measure above, then add measures here in the order you want them played.</p>
+        <div className="empty">Save a progression as a measure, then add measures here in the order you want them played.</div>
       ) : (
-        <ol className="arrangement">
+        <ol className="timeline">
           {song.arrangement.map((id, slot) => {
             const m = byId.get(id)!;
             const items = parseProgression(m.chords);
             const isPlaying = playing?.slot === slot;
             return (
-              <li key={`${slot}-${id}`} className={`slot${isPlaying ? ' playing' : ''}${editingId === id ? ' editing' : ''}`}>
-                <div className="slot-head">
-                  <span className="slot-num">{slot + 1}</span>
-                  <button className="slot-name" onClick={() => onEdit(id)} title="Edit this measure">{m.name}</button>
+              <li
+                key={`${slot}-${id}`}
+                className={`clip${isPlaying ? ' is-playing' : ''}${editingId === id ? ' is-editing' : ''}`}
+                style={{ flexGrow: Math.max(1, items.length) }}
+              >
+                <div className="clip-head">
+                  <span className="clip-num">{String(slot + 1).padStart(2, '0')}</span>
+                  <button className="clip-name" onClick={() => onEdit(id)} title="Edit this measure">{m.name}</button>
                 </div>
-                <div className="slot-chords">
+                <div className="clip-chords">
                   {items.map((it, k) => (
-                    <span key={k} className={`slot-chord${!it.chord ? ' bad' : ''}${isPlaying && playing!.item === k ? ' now' : ''}`}>
+                    <span key={k} className={`clip-chord${!it.chord ? ' is-bad' : ''}${isPlaying && playing!.item === k ? ' is-now' : ''}`}>
                       {it.chord?.symbol ?? it.text}
                     </span>
                   ))}
                 </div>
-                <div className="slot-actions">
-                  <button onClick={() => onPlay(slot)} title="Play from here" aria-label="Play from here">▶</button>
-                  <button onClick={() => onSongChange(arrangeMove(song, slot, -1))} disabled={slot === 0} aria-label="Move earlier">←</button>
-                  <button onClick={() => onSongChange(arrangeMove(song, slot, 1))} disabled={slot === song.arrangement.length - 1} aria-label="Move later">→</button>
-                  <button onClick={() => onSongChange(arrangeRemoveAt(song, slot))} aria-label="Remove from song">×</button>
+                <div className="clip-actions">
+                  <button className="icon-btn icon-btn--sm" onClick={() => onPlay(slot)} title="Play from here" aria-label="Play from here"><PlayIcon /></button>
+                  <button className="icon-btn icon-btn--sm" onClick={() => onSongChange(arrangeMove(song, slot, -1))} disabled={slot === 0} aria-label="Move earlier"><ArrowLeftIcon /></button>
+                  <button className="icon-btn icon-btn--sm" onClick={() => onSongChange(arrangeMove(song, slot, 1))} disabled={slot === song.arrangement.length - 1} aria-label="Move later"><ArrowRightIcon /></button>
+                  <button className="icon-btn icon-btn--sm" onClick={() => onSongChange(arrangeRemoveAt(song, slot))} aria-label="Remove from song"><CloseIcon /></button>
                 </div>
               </li>
             );
@@ -82,15 +85,17 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
         </ol>
       )}
 
-      <h4>Saved measures <span className="muted">— click + to add one to the end of the song (repeats are fine)</span></h4>
+      <h4 className="subhead">
+        Saved measures <span className="subhead-note">Add a measure as many times as you like — editing it updates every repeat.</span>
+      </h4>
       {song.measures.length === 0 ? (
-        <p className="shape-help">No saved measures yet.</p>
+        <div className="empty">No saved measures yet.</div>
       ) : (
         <ul className="library">
           {song.measures.map((m) => {
             const uses = song.arrangement.filter((a) => a === m.id).length;
             return (
-              <li key={m.id} className={editingId === m.id ? 'editing' : ''}>
+              <li key={m.id} className={editingId === m.id ? 'is-editing' : ''}>
                 <input
                   className="measure-name"
                   value={m.name}
@@ -98,12 +103,12 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
                   aria-label="Measure name"
                 />
                 <span className="measure-chords">{m.chords}</span>
-                <span className="muted small">{uses ? `used ${uses}×` : 'not in song'}</span>
+                <span className="measure-uses">{uses ? `×${uses} in song` : 'not in song'}</span>
                 <span className="library-actions">
-                  <button className="btn small" onClick={() => onSongChange(arrangeAppend(song, m.id))}>+ Add</button>
-                  <button className="btn small" onClick={() => onEdit(m.id)}>Edit</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => onSongChange(arrangeAppend(song, m.id))}><PlusIcon /> Add</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => onEdit(m.id)}>Edit</button>
                   <button
-                    className="btn small danger"
+                    className="btn btn--ghost btn--sm btn--danger"
                     onClick={() => {
                       if (!uses || confirm(`Delete "${m.name}"? It will also be removed from the song (${uses}×).`))
                         onSongChange(deleteMeasure(song, m.id));
@@ -117,7 +122,7 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
           })}
         </ul>
       )}
-      <p className="shape-help">Your song is saved automatically in this browser.</p>
+      <p className="hint">Your song is saved automatically in this browser.</p>
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { ThemePicker } from './components/ThemePicker';
+import { useSortableSections } from './components/useSortableSections';
+import { GripIcon, PlayIcon } from './components/Icons';
+import { applyTheme, loadTheme, saveTheme, watchSystemTheme, type ThemeId } from './theme';
+import { DEFAULT_ORDER, loadOrder, saveOrder, SECTION_TITLES, type SectionId } from './layout';
 import { ChordSearch } from './components/ChordSearch';
 import { ChordInfo } from './components/ChordInfo';
 import { PianoKeyboard } from './components/PianoKeyboard';
@@ -50,6 +55,22 @@ export default function App() {
   const timers = useRef<number[]>([]);
 
   useEffect(() => preloadSamples(), []);
+
+  // Theme (persisted; "Match system" follows the OS setting live)
+  const [theme, setTheme] = useState<ThemeId>(loadTheme);
+  useEffect(() => {
+    applyTheme(theme);
+    saveTheme(theme);
+    return theme === 'system' ? watchSystemTheme(() => applyTheme('system')) : undefined;
+  }, [theme]);
+
+  // Section order (drag to rearrange; persisted)
+  const [order, setOrderState] = useState<SectionId[]>(loadOrder);
+  const setOrder = (o: SectionId[]) => {
+    setOrderState(o);
+    saveOrder(o);
+  };
+  const { stackRef, drag, startDrag, onHandleKeyDown } = useSortableSections(order, setOrder);
   useEffect(() => saveSong(song), [song]);
 
   const result = parseChord(input);
@@ -161,19 +182,91 @@ export default function App() {
     setSelectedStep(null);
   }
 
-  return (
-    <main className="app">
-      <header>
-        <h1>Chord Visualizer</h1>
-        <p className="subtitle">See and hear how chords are built on piano and guitar.</p>
-      </header>
+  // Display-only text for the transport dock.
+  const playbackStatus = !playing
+    ? null
+    : playing.kind === 'progression'
+      ? `Progression · chord ${playing.index + 1} of ${progItems.length}`
+      : `${song.measures.find((m) => m.id === song.arrangement[playing.slot])?.name ?? 'Song'} · ${playing.slot + 1} of ${song.arrangement.length}`;
 
-      <Section id="search" title="Chord search" summary={chord.symbol}>
+  const dragProps = (id: SectionId) => ({
+    onPointerDown: (e: PointerEvent) => startDrag(id, e),
+    onKeyDown: (e: KeyboardEvent) => onHandleKeyDown(id, e),
+    isDragging: drag?.id === id,
+  });
+
+  function playPianoChord() {
+    stopEverything();
+    playChord('piano', chordMidiNotes(chord));
+  }
+
+  const sections: Record<SectionId, ReactNode> = {
+    search: (
+      <Section
+        drag={dragProps('search')} id="search" title="Chord search" summary={chord.symbol}>
         <ChordSearch value={input} error={error} onChange={handleChange} />
         {error && <p className="stale-note">Still showing {chord.symbol}.</p>}
       </Section>
-
-      <Section id="progression" title="Chord progression" summary={progText}>
+    ),
+    chord: (
+      <Section
+        drag={dragProps('chord')} id="chord" title="Chord breakdown" summary={`${chord.symbol} = ${chord.tones.map((t) => t.name).join(' ')}`}>
+        <ChordInfo chord={chord} />
+      </Section>
+    ),
+    piano: (
+      <Section
+        drag={dragProps('piano')} id="piano" title="Piano" summary={chord.tones.map((t) => t.name).join(' ')}
+        actions={
+          <button className="btn btn--outline btn--sm" onClick={playPianoChord}>
+            <PlayIcon /> Play
+          </button>
+        }
+      >
+        <PianoKeyboard chord={chord} />
+      </Section>
+    ),
+    shape: (
+      <Section
+        drag={dragProps('shape')} id="shape" title="Guitar chord shape" summary={shape ? `${chord.symbol}  ${shape.frets.map((f) => f ?? 'x').join('')}` : chord.symbol}>
+        <GuitarShape
+          chord={chord}
+          shapes={shapes}
+          shapeIndex={shapeIndex}
+          onShapeIndexChange={setShapeIndex}
+          onStrum={() => {
+            stopEverything();
+            playChord('guitar', notesFor('guitar'));
+          }}
+        />
+      </Section>
+    ),
+    fretboard: (
+      <Section
+        drag={dragProps('fretboard')}
+        id="fretboard"
+        title="Guitar fretboard"
+        summary={tuning.name}
+        actions={
+          <TuningSelect
+            tuning={tuning}
+            onChange={(t) => {
+              setTuning(t);
+              setShapeIndex(0);
+            }}
+          />
+        }
+      >
+        <GuitarFretboard chord={chord} tuning={tuning} shape={shape} />
+        <div className="legend">
+          <span><i className="swatch hl-root" /> Root</span>
+          <span><i className="swatch hl-tone" /> Chord tone</span>
+        </div>
+      </Section>
+    ),
+    progression: (
+      <Section
+        drag={dragProps('progression')} id="progression" title="Chord progression" summary={progText}>
         <ProgressionPanel
           text={progText}
           onTextChange={(t) => {
@@ -198,8 +291,10 @@ export default function App() {
           onCancelEdit={() => setEditingId(null)}
         />
       </Section>
-
-      <Section id="song" title="My song" summary={`${song.title} · ${song.arrangement.length} measures`}>
+    ),
+    song: (
+      <Section
+        drag={dragProps('song')} id="song" title="My song" summary={`${song.title} · ${song.arrangement.length} measures`}>
         <SongBuilder
           song={song}
           onSongChange={setSong}
@@ -210,48 +305,38 @@ export default function App() {
           onStop={stopEverything}
         />
       </Section>
+    ),
+  };
 
-      <Section id="chord" title="Chord breakdown" summary={`${chord.symbol} = ${chord.tones.map((t) => t.name).join(' ')}`}>
-        <ChordInfo chord={chord} />
-      </Section>
-
-      <Section id="piano" title="Piano" summary={chord.tones.map((t) => t.name).join(' ')}>
-        <PianoKeyboard chord={chord} />
-      </Section>
-
-      <Section id="shape" title="Guitar chord shape" summary={shape ? `${chord.symbol}  ${shape.frets.map((f) => f ?? 'x').join('')}` : chord.symbol}>
-        <GuitarShape
-          chord={chord}
-          shapes={shapes}
-          shapeIndex={shapeIndex}
-          onShapeIndexChange={setShapeIndex}
-          onStrum={() => {
-            stopEverything();
-            playChord('guitar', notesFor('guitar'));
-          }}
-        />
-      </Section>
-
-      <Section
-        id="fretboard"
-        title="Guitar fretboard"
-        summary={tuning.name}
-        actions={
-          <TuningSelect
-            tuning={tuning}
-            onChange={(t) => {
-              setTuning(t);
-              setShapeIndex(0);
-            }}
-          />
-        }
-      >
-        <GuitarFretboard chord={chord} tuning={tuning} shape={shape} />
-        <div className="legend">
-          <span><i className="swatch hl-root" /> Root</span>
-          <span><i className="swatch hl-tone" /> Chord tone</span>
+  return (
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-name">Chord Visualizer</span>
+          <span className="brand-tagline">See and hear how chords are built on piano and guitar</span>
         </div>
-      </Section>
+        <div className="topbar-tools">
+          {order.join() !== DEFAULT_ORDER.join() && (
+            <button className="btn btn--ghost btn--sm" onClick={() => setOrder(DEFAULT_ORDER)}>
+              Reset layout
+            </button>
+          )}
+          <ThemePicker value={theme} onChange={setTheme} />
+        </div>
+      </header>
+
+      <main className="stack" ref={stackRef}>
+        {order.map((id) => (
+          <Fragment key={id}>{sections[id]}</Fragment>
+        ))}
+        {drag && <div className="drop-indicator" style={{ top: drag.indicatorTop }} aria-hidden="true" />}
+      </main>
+      {drag && (
+        <div className="drag-ghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
+          <GripIcon /> {SECTION_TITLES[drag.id]}
+        </div>
+      )}
 
       <AudioControls
         instrument={instrument}
@@ -265,11 +350,13 @@ export default function App() {
           playArpeggio(instrument, notesFor(instrument));
         }}
         onStop={stopEverything}
+        chordSymbol={chord.symbol}
+        status={playbackStatus}
       />
 
       <footer className="credits">
-        Piano: Salamander Grand Piano by Alexander Holm (CC-BY 3.0). Guitar: tonejs-instruments by Nicholaus Brosowsky (CC-BY 3.0).
+        Piano: Salamander Grand Piano by Alexander Holm (CC-BY 3.0) · Guitar: tonejs-instruments by Nicholaus Brosowsky (CC-BY 3.0)
       </footer>
-    </main>
+    </div>
   );
 }
