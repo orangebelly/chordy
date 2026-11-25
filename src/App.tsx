@@ -22,7 +22,11 @@ import { chordMidiNotes, parseChord, type Chord } from './utils/chordParser';
 import { TUNINGS } from './utils/guitarNotes';
 import { chordShapes, shapeMidiNotes } from './utils/guitarShapes';
 import { buildSteps, parseProgression, type Step } from './utils/progression';
-import { addMeasure, loadSong, saveSong, updateMeasure, type Song } from './utils/song';
+import {
+  addMeasure, loadSong, measureDurations, playbackBpm, resetChordLengths, saveSong, setChordLength, updateMeasure, type Song,
+} from './utils/song';
+import { PlayAlong } from './components/PlayAlong';
+import { chordSchedule } from './utils/schedule';
 import {
   audioTime, loadSamples, playArpeggio, playChord, preloadSamples, scheduleNotes, stopAll, type Instrument,
 } from './utils/audio';
@@ -258,20 +262,37 @@ export default function App() {
     stopAll();
   }
 
-  /** Play steps one after another, updating the piano/guitar views as each chord sounds. */
-  function playSequence(seq: { step: Step; pos: Playing }[]) {
+  /**
+   * Play steps one after another, updating the piano/guitar views as each chord sounds.
+   * `beats` gives each step's length (default: the song's beats per chord).
+   * The whole sequence is scheduled on the audio clock and every chord is released
+   * when the next one starts, so chords don't ring into each other.
+   */
+  async function playSequence(seq: { step: Step; pos: Playing; beats?: number }[], bpm = song.bpm) {
     stopEverything();
-    const ms = (60 / song.bpm) * song.beatsPerChord * 1000;
+    if (!seq.length) return;
+    const token = playToken.current;
+    const inst = instrument;
+    await loadSamples(inst);
+    if (token !== playToken.current) return; // stopped (or restarted) while samples loaded
+    const { notes, starts, end } = chordSchedule(
+      seq.map(({ step, beats = song.beatsPerChord }) => ({ midis: stepNotes(step), beats })),
+      bpm,
+      inst === 'guitar' ? 0.03 : 0,
+      inst === 'guitar' ? 1 : 0.9,
+    );
+    const at = audioTime() + 0.05;
+    void scheduleNotes(inst, notes, at);
+    const lead = (at - audioTime()) * 1000;
     seq.forEach(({ step, pos }, n) => {
       timers.current.push(
         window.setTimeout(() => {
           setPlaying(pos);
           showStep(step);
-          playChord(instrument, stepNotes(step));
-        }, n * ms),
+        }, lead + starts[n] * 1000),
       );
     });
-    timers.current.push(window.setTimeout(() => setPlaying(null), seq.length * ms));
+    timers.current.push(window.setTimeout(() => setPlaying(null), lead + end * 1000));
   }
 
   function playProgression() {
@@ -281,12 +302,21 @@ export default function App() {
   }
 
   function playSong(fromSlot = 0) {
+    // Each chord lasts its own length (set in the measure's Lengths editor).
+    const lengths = new Map(song.measures.map((m) => [m.id, measureDurations(m, song.beatsPerChord)]));
     playSequence(
       songSteps
         .filter((r) => r.group >= fromSlot)
-        .map((r) => ({ step: r.step, pos: { kind: 'song' as const, slot: r.group, item: r.item } })),
+        .map((r) => ({
+          step: r.step,
+          pos: { kind: 'song' as const, slot: r.group, item: r.item },
+          beats: lengths.get(song.arrangement[r.group])?.[r.item],
+        })),
+      playbackBpm(song), // the song's speed setting applies
     );
   }
+
+  const [playAlongOpen, setPlayAlongOpen] = useState(false);
 
   /** Melody alone (style null) or melody + a plan's chords, on one shared audio clock. */
   /**
@@ -377,7 +407,8 @@ export default function App() {
     let next = [1, 2, 4].includes(beats) ? { ...song, beatsPerChord: beats } : song;
     if (asMeasure) {
       const added = addMeasure(next, text);
-      next = added.song;
+      // The measure keeps each chord's real length (e.g. 3 beats in 3/4), editable under Lengths.
+      next = updateMeasure(added.song, added.id, { durations: plan.slots.map((sl) => sl.duration) });
       setEditingId(added.id);
     } else setEditingId(null);
     setSong(next);
@@ -606,6 +637,18 @@ export default function App() {
           playing={playing?.kind === 'song' ? playing : null}
           onPlay={playSong}
           onStop={stopEverything}
+          onChordLength={(id, i, beats) => setSong(setChordLength(song, id, i, beats))}
+          onResetLengths={(id) => setSong(resetChordLengths(song, id))}
+          onPlayChord={(c) => {
+            stopEverything();
+            const step = buildSteps([c], shapesFor)[0];
+            showStep(step);
+            playChord(instrument, stepNotes(step));
+          }}
+          onPlayAlong={() => {
+            stopEverything();
+            setPlayAlongOpen(true);
+          }}
         />
       </Section>
     ),
@@ -669,6 +712,9 @@ export default function App() {
       />
 
       <HelpPanel page={page} />
+      {playAlongOpen && (
+        <PlayAlong song={song} onSpeed={(speed) => setSong({ ...song, speed })} onClose={() => setPlayAlongOpen(false)} />
+      )}
 
       <footer className="credits">
         Piano: Salamander Grand Piano by Alexander Holm (CC-BY 3.0) · Guitar: tonejs-instruments by Nicholaus Brosowsky (CC-BY 3.0)

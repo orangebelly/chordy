@@ -51,6 +51,23 @@ const HELP: Record<PageId, { title: string; sections: { h: string; items: ReactN
           <><b>Save as measure</b> stores the progression and adds it to the song.</>,
           <>Use a measure as many times as you like; editing it (click its name, then <b>Update measure</b>) changes every repeat.</>,
           <>Reorder or remove measures with the buttons on each one. Everything is saved in this browser.</>,
+          <><b>Speed</b> (0.75× – 1.5×) plays the whole song — and the play-along — faster or slower without changing its tempo setting.</>,
+        ],
+      },
+      {
+        h: 'Chord lengths',
+        items: [
+          <>Click a measure in the arrangement (or a saved measure’s chords, or <b>Lengths</b>) to open its chord lengths: each chord is a block on a beat grid. Drag a block’s right edge to make it longer or shorter (half-beat steps); the chords after it move along.</>,
+          <>Or focus the edge and use <K>←</K> <K>→</K> (<K>Shift</K> = a whole beat). Click a block to hear the chord. <b>Reset</b> goes back to equal lengths.</>,
+          <>A small number next to a chord in the arrangement shows a changed length. Changing the measure’s chords to a different number of chords resets its lengths.</>,
+        ],
+      },
+      {
+        h: 'Play along (guitar)',
+        items: [
+          <><b>Play along</b> opens a full-screen view of the whole song: the current and next chord shapes, and every shape of the song below, grouped by measure.</>,
+          <>One bar of count-in clicks, then a strum on every beat (accent on the first). Untick <b>Strum every beat</b> for one strum per chord.</>,
+          <>Shapes are picked across the whole song so your hand moves as little as possible. Click any shape to start from there. <K>Space</K> plays / stops, <K>Esc</K> closes.</>,
         ],
       },
     ],

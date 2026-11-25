@@ -72,3 +72,80 @@ describe('buildSteps', () => {
     expect(buildSteps(chords, null)[0].shape).toBeUndefined();
   });
 });
+
+import { measureDurations, resetChordLengths, setChordLength, songTimeline } from './song';
+
+describe('chord lengths', () => {
+  const base = () => {
+    let s = { ...EMPTY_SONG, beatsPerChord: 4 };
+    const a = addMeasure(s, 'C Am F G');
+    s = a.song;
+    const b = addMeasure(s, 'Dm7 G7 Cmaj7');
+    return { song: b.song, a: a.id, b: b.id };
+  };
+
+  it('defaults every chord to the song’s beats per chord', () => {
+    const { song, a } = base();
+    expect(measureDurations(song.measures.find((m) => m.id === a)!, 4)).toEqual([4, 4, 4, 4]);
+  });
+
+  it('sets one chord’s length, snapped to half beats and clamped', () => {
+    let { song, a } = base();
+    song = setChordLength(song, a, 1, 2.3);
+    song = setChordLength(song, a, 3, 99);
+    song = setChordLength(song, a, 0, 0);
+    expect(song.measures.find((m) => m.id === a)!.durations).toEqual([0.5, 2.5, 4, 16]);
+    expect(setChordLength(song, a, 9, 2)).toBe(song);
+    expect(setChordLength(song, 'nope', 0, 2)).toBe(song);
+  });
+
+  it('lengths that no longer match the chords fall back to the default', () => {
+    let { song, a } = base();
+    song = setChordLength(song, a, 0, 2);
+    song = updateMeasure(song, a, { chords: 'C G' });
+    expect(measureDurations(song.measures.find((m) => m.id === a)!, 4)).toEqual([4, 4]);
+    expect(resetChordLengths(setChordLength(song, a, 0, 1), a).measures.find((m) => m.id === a)!.durations).toBeUndefined();
+  });
+
+  it('builds the song timeline with the lengths, repeats and skipped bad tokens', () => {
+    let { song, a, b } = base();
+    song = setChordLength(song, a, 0, 2); // C for 2 beats
+    song = arrangeAppend(song, a); // A B A
+    song = updateMeasure(song, b, { chords: 'Dm7 XX G7' });
+    const { events, beats } = songTimeline(song);
+    expect(events.map((e) => `${e.chord.symbol}@${e.start}+${e.duration}`).join(' ')).toBe(
+      'C@0+2 Am@2+4 F@6+4 G@10+4 Dm7@14+4 G7@18+4 C@22+2 Am@24+4 F@28+4 G@32+4',
+    );
+    expect(beats).toBe(36);
+    expect(events[4]).toMatchObject({ slot: 1, item: 0 });
+    expect(events[5]).toMatchObject({ slot: 1, item: 2 });
+    expect(songTimeline(song, 2).events[0]).toMatchObject({ slot: 2, start: 0 });
+  });
+
+  it('keeps valid saved lengths and drops broken ones when loading', () => {
+    const store = new Map<string, string>();
+    (globalThis as any).localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+    const { song, a } = base();
+    saveSong(setChordLength(song, a, 0, 2));
+    expect(loadSong().measures[0].durations).toEqual([2, 4, 4, 4]);
+    store.set('chord-visualizer.song.v1', JSON.stringify({ ...song, measures: [{ ...song.measures[0], durations: [2, 'x'] }] }));
+    expect(loadSong().measures[0].durations).toBeUndefined();
+  });
+});
+
+import { playbackBpm, SPEEDS } from './song';
+
+describe('playback speed', () => {
+  it('scales the tempo and is saved / repaired', () => {
+    const store = new Map<string, string>();
+    (globalThis as any).localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+    expect(SPEEDS).toEqual([0.75, 1, 1.1, 1.2, 1.5]);
+    expect(playbackBpm({ ...EMPTY_SONG, bpm: 100, speed: 1.5 })).toBe(150);
+    saveSong({ ...EMPTY_SONG, speed: 1.2 });
+    expect(loadSong().speed).toBe(1.2);
+    store.set('chord-visualizer.song.v1', JSON.stringify({ ...EMPTY_SONG, speed: 7 }));
+    expect(loadSong().speed).toBe(1);
+    store.set('chord-visualizer.song.v1', JSON.stringify({ title: 'old song, saved before speed existed' }));
+    expect(loadSong().speed).toBe(1);
+  });
+});

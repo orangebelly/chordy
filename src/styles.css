@@ -1171,3 +1171,136 @@ input[type='range']:disabled { opacity: 0.4; }
   .shape-compare .shape-symbol { font-size: 24px; }
   .shape-compare .shape-controls { gap: 6px; }
 }
+
+/* ---------- Compose: chord lengths editor --------------------------------- */
+
+.library li.is-open { background: linear-gradient(90deg, var(--row-highlight), transparent); }
+.library-lengths { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 6px 0 10px; min-width: 0; width: 100%; }
+.lengths { display: flex; flex-direction: column; gap: 6px; width: 100%; min-width: 0; }
+.lengths-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); }
+.lengths-track { position: relative; min-width: 100%; }
+.lengths-ruler { position: relative; height: 20px; border-bottom: 1px solid var(--line); }
+.lengths-ruler span { position: absolute; top: 3px; padding-left: 5px; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.lengths-lane {
+  position: relative; height: 64px;
+  background-image: linear-gradient(90deg, var(--line-strong) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: var(--bar) 100%, var(--beat) 100%;
+}
+.lengths-lane.is-dragging, .lengths-lane.is-dragging * { cursor: ew-resize !important; }
+.length-block {
+  position: absolute; top: 8px; bottom: 8px; margin-left: 1px;
+  display: flex; border-radius: 6px; overflow: hidden;
+  background: var(--panel-3); border: 1px solid var(--line-strong);
+  transition: background-color 120ms;
+}
+.length-block:hover { background: var(--hover-strong); }
+.length-block.is-dragged { border-color: var(--text); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 2; }
+.length-chord {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+  padding: 0 8px; border: 0; background: none; text-align: left; overflow: hidden;
+}
+.length-symbol { font-family: var(--font-display); font-size: 20px; line-height: 1.05; white-space: nowrap; }
+.length-beats { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3); white-space: nowrap; }
+.length-handle {
+  flex: none; width: 12px; cursor: ew-resize; touch-action: none; position: relative;
+  border-left: 1px solid var(--line-strong); background: var(--panel-2);
+}
+.length-handle::after {
+  content: ''; position: absolute; left: 4px; top: 30%; bottom: 30%; width: 2px; border-radius: 1px;
+  background: var(--text-3); box-shadow: 3px 0 0 var(--text-3);
+}
+.length-handle:hover, .length-handle:focus-visible { background: var(--text-2); }
+.length-handle:hover::after, .length-handle:focus-visible::after { background: var(--bg); box-shadow: 3px 0 0 var(--bg); }
+.lengths-total { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); }
+.clip-beats { font-size: 9.5px; margin-left: 2px; color: var(--text-3); vertical-align: baseline; }
+.clip-chord.is-now .clip-beats { color: inherit; }
+
+/* ---------- Guitar play-along (full screen) ------------------------------- */
+
+.playalong {
+  position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column;
+  background: var(--bg); padding: 16px 24px 20px; gap: 16px; overflow: hidden;
+}
+.pa-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.pa-title { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.pa-song { font-family: var(--font-display); font-size: 32px; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-meta { font-family: var(--font-mono); font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-stage { position: relative; flex: 1; min-height: 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.pa-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0;
+  padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel);
+}
+.pa-card--now { border-color: var(--text-2); }
+.pa-card .chord-diagram { width: auto; height: min(42vh, 300px); max-width: 100%; }
+.pa-card:not(.pa-card--now) { opacity: 0.7; }
+.pa-card:not(.pa-card--now) .chord-diagram { height: min(30vh, 210px); }
+.pa-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-3); }
+.pa-symbol { font-family: var(--font-display); font-size: clamp(44px, 7vw, 88px); line-height: 0.95; }
+.pa-card:not(.pa-card--now) .pa-symbol { font-size: clamp(32px, 4vw, 56px); }
+.pa-frets { font-family: var(--font-mono); font-size: 14px; letter-spacing: 0.1em; color: var(--text-2); }
+.pa-end { font-family: var(--font-display); font-size: 40px; color: var(--text-3); }
+.pa-beats { display: flex; gap: 8px; }
+.pa-beats i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-strong); }
+.pa-beats i.is-past { background: var(--text-3); border-color: var(--text-3); }
+.pa-beats i.is-on { background: var(--root); border-color: var(--root); }
+.pa-countin {
+  position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: clamp(120px, 22vw, 260px); color: var(--text);
+  background: color-mix(in srgb, var(--bg) 70%, transparent); border-radius: 14px; pointer-events: none;
+}
+.pa-strip { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; flex: none; }
+.pa-measure { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.pa-measure-name { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.pa-measure-chords { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.pa-mini {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 6px 4px;
+  border: 1px solid transparent; border-radius: 8px; background: none; transition: background-color 120ms, opacity 120ms;
+}
+.pa-mini:hover { background: var(--panel-2); }
+.pa-mini.is-now { background: var(--panel-3); border-color: var(--text); }
+.pa-mini.is-past { opacity: 0.45; }
+.pa-mini .chord-diagram.small { width: 64px; height: 81px; }
+.pa-mini-symbol { font-family: var(--font-display); font-size: 18px; line-height: 1.1; }
+.pa-mini-beats { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); }
+@media (max-width: 720px) {
+  .playalong { padding: 12px; gap: 10px; }
+  .pa-head { position: relative; gap: 8px 12px; }
+  .pa-title { flex: 1 1 100%; padding-right: 36px; }
+  .pa-head > .icon-btn { position: absolute; top: 0; right: 0; }
+  .pa-head > .btn { flex: 1; }
+  .pa-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pa-song { font-size: 24px; }
+  .pa-stage { grid-template-columns: 1fr 0.8fr; gap: 8px; }
+  .pa-card { padding: 10px 6px; }
+  .pa-card .chord-diagram { height: min(30vh, 200px); }
+  .pa-card:not(.pa-card--now) .chord-diagram { height: min(20vh, 140px); }
+}
+
+/* ---------- Song: speed, click a measure to open its lengths --------------- */
+
+.speed .segmented button { min-width: 38px; }
+.clip { cursor: pointer; }
+.clip.is-open { border-color: var(--text-2); border-left-color: var(--text); background: var(--panel-3); }
+button.measure-chords {
+  border: 0; background: none; padding: 4px 6px; margin-left: -6px; border-radius: var(--radius);
+  text-align: left; cursor: pointer; transition: background-color 120ms, color 120ms;
+}
+button.measure-chords:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
+button.measure-chords[aria-expanded='true'] { color: var(--text); }
+.arrangement-lengths {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  margin-top: 8px; padding: 10px 12px 12px;
+  border: 1px solid var(--text-2); border-radius: var(--radius-lg); background: var(--panel-2);
+  animation: pop-in 160ms var(--ease);
+}
+.arrangement-lengths-head { display: flex; align-items: center; gap: 10px; width: 100%; }
+.arrangement-lengths-title { font-weight: 600; font-size: 14px; }
+.arrangement-lengths-note { flex: 1; font-size: 12px; color: var(--text-3); }
+.library-lengths { animation: pop-in 160ms var(--ease); }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .arrangement-lengths, .library-lengths { animation: none; } }
+.pa-head .speed { flex: none; }
+@media (max-width: 720px) {
+  .song-head .speed { flex-basis: 100%; }
+  .pa-head .speed .segmented button { min-width: 0; padding: 0 6px; }
+}
