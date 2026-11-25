@@ -18,8 +18,7 @@ export function PianoKeyboard({ chord }: { chord: Chord }) {
   const whiteWidth = 100 / whiteKeys.length;
 
   return (
-    <section className="card">
-      <h3>Piano</h3>
+    <div>
       <div className="piano" role="group" aria-label="Piano keyboard">
         {whiteKeys.map((midi) => {
           const pc = mod12(midi);
@@ -60,6 +59,6 @@ export function PianoKeyboard({ chord }: { chord: Chord }) {
             );
           })}
       </div>
-    </section>
+    </div>
   );
 }

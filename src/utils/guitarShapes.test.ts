@@ -10,7 +10,7 @@ function chord(symbol: string): Chord {
 }
 
 const ROOTS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-const SUFFIXES = ['', 'm', 'dim', 'aug', 'sus2', 'sus4', '7', 'maj7', 'm7', 'mMaj7', 'dim7', 'm7b5', 'add9', 'maj9', 'm9'];
+const SUFFIXES = ['', 'm', 'dim', 'aug', 'sus2', 'sus4', '7', 'maj7', 'm7', 'mMaj7', 'dim7', 'm7b5', 'add9', 'maj9', 'm9', '9', 'sus4add9'];
 
 describe('chord shapes', () => {
   it('every root × type has a valid shape', () => {

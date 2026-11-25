@@ -2,7 +2,7 @@ import type { Chord } from '../utils/chordParser';
 
 export function ChordInfo({ chord }: { chord: Chord }) {
   return (
-    <section className="card chord-info">
+    <div className="chord-info">
       <div className="chord-heading">
         <h2>{chord.symbol}</h2>
         <span className="chord-type">{chord.typeName}</span>
@@ -23,6 +23,6 @@ export function ChordInfo({ chord }: { chord: Chord }) {
         <dt>Intervals</dt>
         <dd>{chord.tones.map((t) => t.interval.symbol).join(' – ')}</dd>
       </dl>
-    </section>
+    </div>
   );
 }

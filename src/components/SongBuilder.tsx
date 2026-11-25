@@ -30,7 +30,7 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
   const seconds = chordCount * (60 / song.bpm) * song.beatsPerChord;
 
   return (
-    <section className="card song">
+    <div className="song">
       <div className="card-header">
         <input
           className="song-title"
@@ -118,6 +118,6 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
         </ul>
       )}
       <p className="shape-help">Your song is saved automatically in this browser.</p>
-    </section>
+    </div>
   );
 }

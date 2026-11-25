@@ -34,8 +34,7 @@ export function ProgressionPanel(p: Props) {
   const playable = p.items.some((i) => i.chord);
 
   return (
-    <section className="card progression">
-      <h3>Chord progression</h3>
+    <div className="progression">
       <input
         className={`search-input small${invalid.length ? ' has-error' : ''}`}
         value={p.text}
@@ -120,6 +119,6 @@ export function ProgressionPanel(p: Props) {
           </select>
         </label>
       </div>
-    </section>
+    </div>
   );
 }

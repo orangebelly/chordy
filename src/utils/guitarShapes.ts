@@ -49,6 +49,11 @@ const OPEN_SHAPES: Record<string, Frets> = {
   '7:7': [3, 2, 0, 0, 0, 1], // G7
   '9:7': [x, 0, 2, 0, 2, 0], // A7
   '11:7': [x, 2, 1, 2, 0, 2], // B7
+  // Dominant 9
+  '7:9': [3, x, 0, 2, 0, 1], // G9
+  '9:9': [x, 0, 2, 4, 2, 3], // A9
+  // Sus4 add 9
+  '9:sus4add9': [x, 0, 0, 2, 0, 0], // Asus4add9
   // Major 7
   '0:maj7': [x, 3, 2, 0, 0, 0], // Cmaj7
   '2:maj7': [x, x, 0, 2, 2, 2], // Dmaj7
@@ -136,6 +141,15 @@ const TEMPLATES: Record<string, Template[]> = {
     { rootString: 0, offsets: [0, x, 0, 0, -1, x] },
     { rootString: 1, offsets: [x, 0, 1, 0, 1, x] },
     { rootString: 2, offsets: [x, x, 0, 1, 1, 1] },
+  ],
+  '9': [
+    { rootString: 0, offsets: [0, 2, 0, 1, 0, 2] },
+    { rootString: 1, offsets: [x, 0, -1, 0, 0, 0] },
+  ],
+  sus4add9: [
+    { rootString: 0, offsets: [0, 2, 2, 2, 0, 2] },
+    { rootString: 1, offsets: [x, 0, 0, 2, 0, 0] },
+    { rootString: 2, offsets: [x, x, 0, 0, 3, 0] },
   ],
   add9: [
     { rootString: 0, offsets: [0, 2, 4, 1, 0, 0] },

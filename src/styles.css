@@ -333,3 +333,24 @@ header h1 { margin: 0; font-size: 1.6rem; }
 .measure-chords { font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; flex: 1; min-width: 8em; }
 .library-actions { display: flex; gap: 4px; }
 .btn.danger:hover { border-color: var(--error); color: var(--error); }
+
+/* Foldable sections */
+.section { padding: 0; }
+.section-header { display: flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; }
+.section-toggle {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  border: none; background: none; padding: 10px 8px; border-radius: 8px;
+  text-align: left; color: var(--text);
+}
+.section-toggle:hover { background: #f4f4f1; }
+.section-toggle h3 { margin: 0; font-size: 1rem; color: var(--text); font-weight: 650; white-space: nowrap; }
+.chevron { display: inline-block; width: 1em; text-align: center; color: var(--muted); font-size: 1.1rem; line-height: 1; transition: transform 0.15s; transform: rotate(90deg); }
+.section.folded .chevron { transform: rotate(0deg); }
+.section-summary {
+  color: var(--muted); font-size: 0.9rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.section-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.section-body { padding: 4px 16px 16px; }
+.section .tuning-select { max-width: 180px; }

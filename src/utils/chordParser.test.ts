@@ -42,6 +42,8 @@ describe('all chord types (root C)', () => {
     ['Cadd9', 'C E G D'],
     ['Cmaj9', 'C E G B D'],
     ['Cm9', 'C Eb G Bb D'],
+    ['C9', 'C E G Bb D'],
+    ['Csus4add9', 'C F G D'],
   ])('%s', (sym, expected) => expect(notes(sym).join(' ')).toBe(expected));
 });
 
@@ -53,6 +55,12 @@ describe('aliases', () => {
     [['Cm7', 'Cmin7'], 'Minor 7th'],
   ])('%j → %s', (syms, type) => {
     for (const s of syms) expect(chord(s).typeName).toBe(type);
+  });
+  it('sus4add9 and 9 aliases', () => {
+    for (const s of ['Csus4add9', 'Csus4(add9)', 'Cadd9sus4']) expect(chord(s).typeName).toBe('Suspended 4th add 9');
+    expect(chord('Cdom9').typeName).toBe('Dominant 9th');
+    expect(notes('E9')).toEqual(['E', 'G#', 'B', 'D', 'F#']);
+    expect(notes('Dsus4add9')).toEqual(['D', 'G', 'A', 'E']);
   });
   it('M7 and m7 are different', () => {
     expect(chord('CM7').typeName).toBe('Major 7th');
@@ -74,7 +82,7 @@ describe('roots and enharmonics', () => {
   });
   it('all 12 roots parse for every type', () => {
     const roots = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
-    const suffixes = ['', 'm', 'dim', 'aug', 'sus2', 'sus4', '7', 'maj7', 'm7', 'mMaj7', 'dim7', 'm7b5', 'add9', 'maj9', 'm9'];
+    const suffixes = ['', 'm', 'dim', 'aug', 'sus2', 'sus4', '7', 'maj7', 'm7', 'mMaj7', 'dim7', 'm7b5', 'add9', 'maj9', 'm9', '9', 'sus4add9'];
     for (const r of roots)
       for (const s of suffixes) {
         const c = chord(r + s);

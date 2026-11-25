@@ -25,6 +25,7 @@ export const CHORD_TYPES: ChordType[] = [
   { name: 'Suspended 2nd', suffix: 'sus2', intervals: ['1', '2', '5'], aliases: ['sus2'] },
   { name: 'Suspended 4th', suffix: 'sus4', intervals: ['1', '4', '5'], aliases: ['sus4', 'sus'] },
   { name: 'Dominant 7th', suffix: '7', intervals: ['1', '3', '5', 'b7'], aliases: ['7', 'dom7'] },
+  { name: 'Dominant 9th', suffix: '9', intervals: ['1', '3', '5', 'b7', '9'], aliases: ['9', 'dom9'] },
   { name: 'Major 7th', suffix: 'maj7', intervals: ['1', '3', '5', '7'], aliases: ['maj7', 'M7', 'major7', 'Δ', 'Δ7'] },
   { name: 'Minor 7th', suffix: 'm7', intervals: ['1', 'b3', '5', 'b7'], aliases: ['m7', 'min7', 'minor7', '-7'] },
   {
@@ -41,6 +42,12 @@ export const CHORD_TYPES: ChordType[] = [
     aliases: ['m7b5', 'min7b5', 'ø', 'ø7'],
   },
   { name: 'Add 9', suffix: 'add9', intervals: ['1', '3', '5', '9'], aliases: ['add9'] },
+  {
+    name: 'Suspended 4th add 9',
+    suffix: 'sus4add9',
+    intervals: ['1', '4', '5', '9'],
+    aliases: ['sus4add9', 'sus4(add9)', 'add9sus4', 'sus4add2'],
+  },
   { name: 'Major 9th', suffix: 'maj9', intervals: ['1', '3', '5', '7', '9'], aliases: ['maj9', 'M9'] },
   { name: 'Minor 9th', suffix: 'm9', intervals: ['1', 'b3', '5', 'b7', '9'], aliases: ['m9', 'min9'] },
 ];

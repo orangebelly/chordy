@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChordSearch } from './components/ChordSearch';
 import { ChordInfo } from './components/ChordInfo';
 import { PianoKeyboard } from './components/PianoKeyboard';
-import { GuitarFretboard } from './components/GuitarFretboard';
+import { GuitarFretboard, TuningSelect } from './components/GuitarFretboard';
+import { GuitarShape } from './components/GuitarShape';
+import { Section } from './components/Section';
 import { AudioControls } from './components/AudioControls';
 import { ProgressionPanel } from './components/ProgressionPanel';
 import { SongBuilder, type SongPosition } from './components/SongBuilder';
@@ -166,65 +168,90 @@ export default function App() {
         <p className="subtitle">See and hear how chords are built on piano and guitar.</p>
       </header>
 
-      <ChordSearch value={input} error={error} onChange={handleChange} />
-      {error && <p className="stale-note">Still showing {chord.symbol}.</p>}
+      <Section id="search" title="Chord search" summary={chord.symbol}>
+        <ChordSearch value={input} error={error} onChange={handleChange} />
+        {error && <p className="stale-note">Still showing {chord.symbol}.</p>}
+      </Section>
 
-      <ProgressionPanel
-        text={progText}
-        onTextChange={(t) => {
-          setProgText(t);
-          setSelectedStep(null);
-        }}
-        items={progItems}
-        shapes={progSteps.map((s) => s?.shape)}
-        selectedIndex={selectedStep}
-        playingIndex={playing?.kind === 'progression' ? playing.index : null}
-        onSelect={selectStep}
-        bpm={song.bpm}
-        onBpmChange={(bpm) => setSong({ ...song, bpm })}
-        beatsPerChord={song.beatsPerChord}
-        onBeatsChange={(beatsPerChord) => setSong({ ...song, beatsPerChord })}
-        onPlay={playProgression}
-        onStop={stopEverything}
-        editingName={editingMeasure?.name ?? null}
-        hasUnsavedChanges={!!editingMeasure && editingMeasure.chords !== progText.trim()}
-        onSaveNew={saveAsNewMeasure}
-        onUpdate={() => editingMeasure && setSong(updateMeasure(song, editingMeasure.id, { chords: progText.trim() }))}
-        onCancelEdit={() => setEditingId(null)}
-      />
+      <Section id="progression" title="Chord progression" summary={progText}>
+        <ProgressionPanel
+          text={progText}
+          onTextChange={(t) => {
+            setProgText(t);
+            setSelectedStep(null);
+          }}
+          items={progItems}
+          shapes={progSteps.map((s) => s?.shape)}
+          selectedIndex={selectedStep}
+          playingIndex={playing?.kind === 'progression' ? playing.index : null}
+          onSelect={selectStep}
+          bpm={song.bpm}
+          onBpmChange={(bpm) => setSong({ ...song, bpm })}
+          beatsPerChord={song.beatsPerChord}
+          onBeatsChange={(beatsPerChord) => setSong({ ...song, beatsPerChord })}
+          onPlay={playProgression}
+          onStop={stopEverything}
+          editingName={editingMeasure?.name ?? null}
+          hasUnsavedChanges={!!editingMeasure && editingMeasure.chords !== progText.trim()}
+          onSaveNew={saveAsNewMeasure}
+          onUpdate={() => editingMeasure && setSong(updateMeasure(song, editingMeasure.id, { chords: progText.trim() }))}
+          onCancelEdit={() => setEditingId(null)}
+        />
+      </Section>
 
-      <SongBuilder
-        song={song}
-        onSongChange={setSong}
-        editingId={editingMeasure?.id ?? null}
-        onEdit={editMeasure}
-        playing={playing?.kind === 'song' ? playing : null}
-        onPlay={playSong}
-        onStop={stopEverything}
-      />
+      <Section id="song" title="My song" summary={`${song.title} · ${song.arrangement.length} measures`}>
+        <SongBuilder
+          song={song}
+          onSongChange={setSong}
+          editingId={editingMeasure?.id ?? null}
+          onEdit={editMeasure}
+          playing={playing?.kind === 'song' ? playing : null}
+          onPlay={playSong}
+          onStop={stopEverything}
+        />
+      </Section>
 
-      <ChordInfo chord={chord} />
-      <PianoKeyboard chord={chord} />
-      <GuitarFretboard
-        chord={chord}
-        tuning={tuning}
-        onTuningChange={(t) => {
-          setTuning(t);
-          setShapeIndex(0);
-        }}
-        shapes={shapes}
-        shapeIndex={shapeIndex}
-        onShapeIndexChange={setShapeIndex}
-        onStrum={() => {
-          stopEverything();
-          playChord('guitar', notesFor('guitar'));
-        }}
-      />
+      <Section id="chord" title="Chord breakdown" summary={`${chord.symbol} = ${chord.tones.map((t) => t.name).join(' ')}`}>
+        <ChordInfo chord={chord} />
+      </Section>
 
-      <div className="legend">
-        <span><i className="swatch hl-root" /> Root</span>
-        <span><i className="swatch hl-tone" /> Chord tone</span>
-      </div>
+      <Section id="piano" title="Piano" summary={chord.tones.map((t) => t.name).join(' ')}>
+        <PianoKeyboard chord={chord} />
+      </Section>
+
+      <Section id="shape" title="Guitar chord shape" summary={shape ? `${chord.symbol}  ${shape.frets.map((f) => f ?? 'x').join('')}` : chord.symbol}>
+        <GuitarShape
+          chord={chord}
+          shapes={shapes}
+          shapeIndex={shapeIndex}
+          onShapeIndexChange={setShapeIndex}
+          onStrum={() => {
+            stopEverything();
+            playChord('guitar', notesFor('guitar'));
+          }}
+        />
+      </Section>
+
+      <Section
+        id="fretboard"
+        title="Guitar fretboard"
+        summary={tuning.name}
+        actions={
+          <TuningSelect
+            tuning={tuning}
+            onChange={(t) => {
+              setTuning(t);
+              setShapeIndex(0);
+            }}
+          />
+        }
+      >
+        <GuitarFretboard chord={chord} tuning={tuning} shape={shape} />
+        <div className="legend">
+          <span><i className="swatch hl-root" /> Root</span>
+          <span><i className="swatch hl-tone" /> Chord tone</span>
+        </div>
+      </Section>
 
       <AudioControls
         instrument={instrument}

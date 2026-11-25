@@ -1,4 +1,4 @@
-const EXAMPLES = ['C', 'Am7', 'G7', 'Dmaj7', 'Fm', 'Bbmaj9', 'Bdim7', 'Esus4'];
+const EXAMPLES = ['C', 'Am7', 'G7', 'Dmaj7', 'Fm', 'G9', 'Asus4add9', 'Bbmaj9', 'Bdim7', 'Esus4'];
 
 interface Props {
   value: string;
@@ -8,7 +8,7 @@ interface Props {
 
 export function ChordSearch({ value, error, onChange }: Props) {
   return (
-    <section className="search">
+    <div className="search">
       <label htmlFor="chord-input" className="visually-hidden">
         Chord name
       </label>
@@ -35,6 +35,6 @@ export function ChordSearch({ value, error, onChange }: Props) {
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }
