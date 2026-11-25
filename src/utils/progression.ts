@@ -124,7 +124,7 @@ export function pianoVoicings(chords: Chord[]): number[][] {
       ? options.reduce((a, b) => (voiceDistance(prev!, b) < voiceDistance(prev!, a) ? b : a))
       : options.reduce((a, b) => (Math.abs(b[0] - target) < Math.abs(a[0] - target) ? b : a));
     prev = right;
-    const bass = 36 + chord.root.pitchClass; // C2–B2
+    const bass = 36 + (chord.bass ?? chord.root).pitchClass; // C2–B2 (a slash chord's bass note)
     return [bass, ...right];
   });
 }

@@ -40,7 +40,6 @@ export function GuitarShape({ chord, shapes, shapeIndex, onShapeIndexChange, onS
           </div>
           <button className="btn btn--outline btn--sm" onClick={onStrum}><PlayIcon /> Strum</button>
         </div>
-        <p className="hint">Numbers are fingers: 1 index · 2 middle · 3 ring · 4 pinky. × don’t play · ○ open string.</p>
       </div>
     </div>
   );

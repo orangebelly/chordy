@@ -168,3 +168,132 @@ export function stopAll() {
   }
   voices = [];
 }
+
+// ---- Held notes, scheduled notes, metronome (added for the melody recorder) ----
+// These reuse the same samples, voice list and master bus as above, so stopAll()
+// silences them too. The functions above are unchanged.
+
+const nearestSample = (samples: Sample[], midi: number) =>
+  samples.reduce((a, b) => (Math.abs(b.midi - midi) < Math.abs(a.midi - midi) ? b : a));
+
+/** Start one sample voice at `t`; returns it so the caller can release it. */
+function startVoice(c: AudioContext, out: AudioNode, sample: Sample, midi: number, t: number, volume: number): Voice {
+  const src = c.createBufferSource();
+  src.buffer = sample.buffer;
+  src.playbackRate.value = Math.pow(2, (midi - sample.midi) / 12);
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(volume, t);
+  src.connect(gain).connect(out);
+  src.start(t);
+  const voice = { src, gain };
+  voices.push(voice);
+  src.onended = () => (voices = voices.filter((v) => v !== voice));
+  return voice;
+}
+
+/** Fade a voice out from `t` (like lifting a finger: the damper falls). */
+function releaseVoice({ src, gain }: Voice, t: number, level: number, release = 0.18) {
+  gain.gain.cancelScheduledValues(t);
+  gain.gain.setValueAtTime(level, t);
+  gain.gain.setTargetAtTime(0, t, release / 3);
+  try {
+    src.stop(t + release + 0.05);
+  } catch {
+    /* already stopped */
+  }
+}
+
+/** A note that keeps sounding until stopNote() — for "press to start, release to stop". */
+export interface NoteHandle {
+  midi: number;
+  /** @internal */ voice?: Voice;
+  /** @internal */ released: boolean;
+  /** @internal */ startedAt: number;
+  /** @internal */ volume: number;
+}
+
+export function startNote(inst: Instrument, midi: number, volume = SETTINGS[inst].volume): NoteHandle {
+  const handle: NoteHandle = { midi, released: false, startedAt: performance.now(), volume };
+  const gen = generation;
+  const { ctx: c, master: out } = getContext();
+  void loadInstrument(inst).then((samples) => {
+    if (gen !== generation) return;
+    const now = c.currentTime;
+    handle.voice = startVoice(c, out, nearestSample(samples, midi), midi, now, volume);
+    // Released while the samples were still loading: give it the length it was held for.
+    if (handle.released) releaseVoice(handle.voice, now + Math.max(0.12, (performance.now() - handle.startedAt) / 1000), volume);
+  });
+  return handle;
+}
+
+export function stopNote(handle: NoteHandle) {
+  if (handle.released) return;
+  handle.released = true;
+  if (handle.voice && ctx) releaseVoice(handle.voice, ctx.currentTime, handle.volume);
+}
+
+export interface ScheduledNote {
+  midi: number;
+  /** seconds from now */
+  start: number;
+  /** seconds */
+  duration: number;
+  volume?: number;
+}
+
+/** Resolves once an instrument's samples are decoded and ready to play. */
+export async function loadSamples(inst: Instrument): Promise<void> {
+  await loadInstrument(inst);
+}
+
+/**
+ * Play notes at exact times on the audio clock, each held for its own duration.
+ * `at` (audio time, see audioTime()) lets several calls share one start time.
+ */
+export async function scheduleNotes(inst: Instrument, notes: ScheduledNote[], at?: number) {
+  const gen = generation;
+  const { ctx: c, master: out } = getContext();
+  const samples = await loadInstrument(inst);
+  if (gen !== generation) return;
+  const t0 = at ?? c.currentTime + 0.03;
+  for (const n of notes) {
+    const volume = n.volume ?? SETTINGS[inst].volume;
+    const v = startVoice(c, out, nearestSample(samples, n.midi), n.midi, t0 + n.start, volume);
+    releaseVoice(v, t0 + n.start + n.duration, volume);
+  }
+}
+
+/** Current audio-clock time in seconds (starts the audio context if needed). */
+export function audioTime(): number {
+  return getContext().ctx.currentTime;
+}
+
+let clicks: OscillatorNode[] = [];
+
+/** A short metronome tick at audio time `when` (accent = first beat of the bar). */
+export function scheduleClick(when: number, accent: boolean) {
+  const { ctx: c, master: out } = getContext();
+  const osc = c.createOscillator();
+  osc.frequency.value = accent ? 1760 : 1175;
+  const gain = c.createGain();
+  gain.gain.setValueAtTime(0, when);
+  gain.gain.linearRampToValueAtTime(accent ? 0.5 : 0.3, when + 0.002);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + 0.06);
+  osc.connect(gain).connect(out);
+  osc.start(when);
+  osc.stop(when + 0.08);
+  clicks.push(osc);
+  osc.onended = () => (clicks = clicks.filter((o) => o !== osc));
+}
+
+/** Silence any metronome ticks that are scheduled but haven't sounded yet. */
+export function cancelClicks() {
+  for (const o of clicks) {
+    try {
+      o.stop();
+    } catch {
+      /* already stopped */
+    }
+  }
+  clicks = [];
+}

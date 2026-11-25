@@ -86,11 +86,6 @@ export function ProgressionPanel(p: Props) {
           )}
         </div>
       )}
-      {p.shapes.some(Boolean) && (
-        <p className="hint">
-          Guitar shapes are chosen together for the least hand movement across the whole progression. Click a chord to load it into the instruments.
-        </p>
-      )}
 
       <div className="toolbar">
         <div className="toolbar-group">

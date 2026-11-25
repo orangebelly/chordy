@@ -49,7 +49,7 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
 
       <h4 className="subhead">Arrangement</h4>
       {song.arrangement.length === 0 ? (
-        <div className="empty">Save a progression as a measure, then add measures here in the order you want them played.</div>
+        <div className="empty">No measures in the song yet.</div>
       ) : (
         <ol className="timeline">
           {song.arrangement.map((id, slot) => {
@@ -86,7 +86,7 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
       )}
 
       <h4 className="subhead">
-        Saved measures <span className="subhead-note">Add a measure as many times as you like — editing it updates every repeat.</span>
+        Saved measures
       </h4>
       {song.measures.length === 0 ? (
         <div className="empty">No saved measures yet.</div>
@@ -122,7 +122,6 @@ export function SongBuilder({ song, onSongChange, editingId, onEdit, playing, on
           })}
         </ul>
       )}
-      <p className="hint">Your song is saved automatically in this browser.</p>
     </div>
   );
 }

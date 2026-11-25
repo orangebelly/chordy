@@ -212,8 +212,48 @@ function makeShape(label: string, frets: Frets): ChordShape | null {
   return assigned && { label, frets, ...assigned };
 }
 
-/** All playable shapes for a chord in standard tuning, easiest first. */
+/**
+ * All playable shapes for a chord in standard tuning, easiest first.
+ * Slash chords (G/B) get shapes with the bass note on the lowest sounding string.
+ */
 export function chordShapes(chord: Chord): ChordShape[] {
+  return chord.bass ? slashShapes(chord) : baseShapes(chord);
+}
+
+/**
+ * Shapes for a slash chord, built from the chord's ordinary shapes: put the bass
+ * note on a low string (muting anything below it), keep the rest of the shape.
+ * Every tone except the 5th must still sound, and the hand must still fit (≤ 4 frets).
+ * If nothing works, fall back to the plain shapes (labelled as such).
+ */
+function slashShapes(chord: Chord): ChordShape[] {
+  const bass = chord.bass!;
+  const required = chord.tones.filter((t) => t.interval.symbol !== '5').map((t) => t.pitchClass);
+  const out: ChordShape[] = [];
+  for (const base of baseShapes(chord)) {
+    for (let str = 0; str <= 3; str++) {
+      for (let f = 0; f <= MAX_FRET; f++) {
+        if (mod12(STANDARD_TUNING[str] + f) !== bass.pitchClass) continue;
+        const frets: Frets = base.frets.map((x, i) => (i < str ? null : i === str ? f : x));
+        const pressed = frets.filter((x): x is number => x !== null && x > 0);
+        if (pressed.length && Math.max(...pressed) - Math.min(...pressed) > 3) continue;
+        const sounding = frets.flatMap((x, i) => (x === null ? [] : [mod12(STANDARD_TUNING[i] + x)]));
+        if (sounding.length < 3 || required.some((pc) => !sounding.includes(pc))) continue;
+        if (out.some((o) => o.frets.join() === frets.join())) continue;
+        const stringName = ['6th', '5th', '4th', '3rd'][str];
+        const s = makeShape(`${bass.name} in the bass (${stringName} string)${f === 0 ? ' · open' : ` · fret ${f}`}`, frets);
+        if (s) out.push(s);
+      }
+    }
+  }
+  if (!out.length) return baseShapes(chord).map((s) => ({ ...s, label: `${s.label} · without the ${bass.name} bass` }));
+  // Lowest on the neck first, then the fullest-sounding.
+  const highest = (s: ChordShape) => Math.max(...s.frets.map((f) => f ?? 0));
+  const muted = (s: ChordShape) => s.frets.filter((f) => f === null).length;
+  return out.sort((a, b) => highest(a) - highest(b) || muted(a) - muted(b));
+}
+
+function baseShapes(chord: Chord): ChordShape[] {
   const rootPc = chord.root.pitchClass;
   const suffix = chord.suffix;
   const shapes: ChordShape[] = [];

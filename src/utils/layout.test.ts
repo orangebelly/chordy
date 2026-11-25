@@ -26,3 +26,42 @@ describe('section order', () => {
     expect(loadOrder()).toEqual(DEFAULT_ORDER);
   });
 });
+
+import { loadPageOrders, PAGE_SECTIONS, savePageOrders } from '../layout';
+import { pageFromHash } from '../pages';
+
+describe('per-page section order', () => {
+  it('defaults to each page’s sections', () => {
+    store.clear();
+    expect(loadPageOrders()).toEqual(PAGE_SECTIONS);
+  });
+  it('migrates an old single-page order, keeping relative order per page', () => {
+    store.clear();
+    store.set('chord-visualizer.layout.v1', JSON.stringify(['song', 'fretboard', 'search', 'chord', 'piano', 'shape', 'progression']));
+    const o = loadPageOrders();
+    expect(o.explore).toEqual(['fretboard', 'search', 'chord', 'piano', 'shape']);
+    expect(o.compose).toEqual(['song', 'progression']);
+    expect(o.harmonize).toEqual(['melody', 'harmony']);
+  });
+  it('saves per page and repairs bad data', () => {
+    store.clear();
+    savePageOrders({ ...PAGE_SECTIONS, compose: ['song', 'progression'] });
+    expect(loadPageOrders().compose).toEqual(['song', 'progression']);
+    store.set('chord-visualizer.layout.v2', JSON.stringify({ explore: ['piano', 'song', 'piano'], compose: 'x' }));
+    const o = loadPageOrders();
+    expect(o.explore[0]).toBe('piano');
+    expect([...o.explore].sort()).toEqual([...PAGE_SECTIONS.explore].sort());
+    expect(o.compose).toEqual(PAGE_SECTIONS.compose);
+    store.set('chord-visualizer.layout.v2', '{bad');
+    expect(loadPageOrders()).toEqual(PAGE_SECTIONS);
+  });
+});
+
+describe('hash pages', () => {
+  it('reads the page from the hash', () => {
+    expect(pageFromHash('#/compose')).toBe('compose');
+    expect(pageFromHash('#harmonize')).toBe('harmonize');
+    expect(pageFromHash('')).toBe(null);
+    expect(pageFromHash('#/nope')).toBe(null);
+  });
+});

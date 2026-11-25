@@ -128,3 +128,50 @@ describe('guitar fretboard', () => {
     expect(std.filter((p) => c.pitchClasses.has(p.pitchClass)).length).toBeGreaterThan(18);
   });
 });
+
+import { bassDescription, chordNoteName } from './chordParser';
+
+describe('slash chords', () => {
+  const ok = (s: string) => {
+    const r = parseChord(s);
+    if (!r.ok) throw new Error(r.error);
+    return r.chord;
+  };
+  it('parses a chord over a bass note', () => {
+    const c = ok('G/B');
+    expect(c.symbol).toBe('G/B');
+    expect(c.root.name).toBe('G');
+    expect(c.bass).toMatchObject({ name: 'B', pitchClass: 11, inChord: true });
+    expect(c.tones.map((t) => t.name)).toEqual(['G', 'B', 'D']);
+    expect(bassDescription(c)).toBe('1st inversion');
+  });
+  it('handles accidentals, other qualities, and spaces', () => {
+    expect(ok('D/F#').bass?.name).toBe('F#');
+    expect(ok('Am7/G').symbol).toBe('Am7/G');
+    expect(bassDescription(ok('Am7/G'))).toBe('3rd inversion');
+    expect(bassDescription(ok('C/G'))).toBe('2nd inversion');
+    expect(ok('bb / d').symbol).toBe('Bb/D');
+    expect(ok('Ebmaj7/Bb').bass?.name).toBe('Bb');
+  });
+  it('a bass that is not in the chord is added to it', () => {
+    const c = ok('C/D');
+    expect(c.bass?.inChord).toBe(false);
+    expect(c.pitchClasses.has(2)).toBe(true);
+    expect(chordNoteName(c, 2)).toBe('D');
+    expect(bassDescription(c)).toBe('added bass note');
+  });
+  it('C/C is just C', () => {
+    expect(ok('C/C')).toEqual(ok('C'));
+  });
+  it('plays the bass below the root', () => {
+    expect(chordMidiNotes(ok('G/B'))).toEqual([47, 55, 59, 62]); // B2 under G3 B3 D4
+    expect(chordMidiNotes(ok('C/E'))).toEqual([40, 48, 52, 55]);
+    expect(chordMidiNotes(ok('C'))).toEqual([48, 52, 55]); // unchanged for ordinary chords
+  });
+  it('explains bad slash chords', () => {
+    const r = parseChord('G/H');
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toMatch(/bass note/);
+    expect(parseChord('X/B').ok).toBe(false);
+  });
+});

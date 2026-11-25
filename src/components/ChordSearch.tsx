@@ -1,6 +1,6 @@
 import { SearchIcon } from './Icons';
 
-const EXAMPLES = ['C', 'Am7', 'G7', 'Dmaj7', 'Fm', 'G9', 'Asus4add9', 'Bbmaj9', 'Bdim7', 'Esus4'];
+const EXAMPLES = ['C', 'Am7', 'G7', 'Dmaj7', 'Fm', 'G9', 'Asus4add9', 'Bbmaj9', 'Bdim7', 'Esus4', 'G/B', 'D/F#', 'Em7 vs C7'];
 
 interface Props {
   value: string;
@@ -20,7 +20,7 @@ export function ChordSearch({ value, error, onChange }: Props) {
           id="chord-input"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Try Dmaj7, Am7, G7, C"
+          placeholder="Try Dmaj7, G/B, or Em7 vs C7"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"

@@ -58,3 +58,29 @@ describe('chord shapes', () => {
     expect(assignFingers([null, 0, 2, 2, 2, 0])!.fingers).toEqual([null, null, 1, 2, 3, null]); // A
   });
 });
+
+describe('slash chord shapes', () => {
+  const frets = (sym: string) => chordShapes(chord(sym)).map((s) => s.frets.map((f) => f ?? 'x').join(''));
+  it('finds the classic shapes', () => {
+    expect(frets('G/B')).toContain('x20003');
+    expect(frets('C/G')).toContain('332010');
+    expect(frets('C/E')).toContain('032010');
+    expect(frets('D/F#')).toContain('2x0232');
+    expect(frets('Am/G')).toContain('302210');
+  });
+  it('every slash shape has the bass lowest and the chord on top', () => {
+    for (const sym of ['G/B', 'C/E', 'C/G', 'D/F#', 'Am/G', 'Am7/G', 'F/C', 'E/G#', 'G/F', 'C/D', 'Dm/F', 'Bb/D', 'Em7/D']) {
+      const c = chord(sym);
+      const shapes = chordShapes(c);
+      expect(shapes.length, sym).toBeGreaterThan(0);
+      for (const s of shapes) {
+        const sounding = s.frets.flatMap((f, i) => (f === null ? [] : [mod12(STANDARD_TUNING[i] + f)]));
+        const where = `${sym} ${s.frets.map((f) => f ?? 'x').join('')}`;
+        expect(sounding[0], where).toBe(c.bass!.pitchClass);
+        for (const pc of sounding) expect(c.pitchClasses.has(pc), where).toBe(true);
+        for (const t of c.tones) if (t.interval.symbol !== '5') expect(sounding.includes(t.pitchClass), where).toBe(true);
+        expect(Math.max(...s.fingers.map((f) => f ?? 0)), where).toBeLessThanOrEqual(4);
+      }
+    }
+  });
+});

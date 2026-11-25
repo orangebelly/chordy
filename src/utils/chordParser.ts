@@ -67,17 +67,62 @@ export interface Chord {
   suffix: string;
   root: ChordTone;
   tones: ChordTone[];
-  /** Distinct pitch classes in the chord — what the instruments highlight */
+  /** Distinct pitch classes in the chord — what the instruments highlight (includes a slash bass) */
   pitchClasses: Set<number>;
+  /** Slash chord bass ("G/B" → B). Absent for ordinary chords. */
+  bass?: BassNote;
+}
+
+export interface BassNote {
+  note: SpelledNote;
+  name: string;
+  pitchClass: number;
+  /** The bass is one of the chord's own tones (an inversion), not an added note */
+  inChord: boolean;
 }
 
 export type ParseResult = { ok: true; chord: Chord } | { ok: false; error: string };
 
 const ROOT_RE = /^([A-Ga-g])([#♯b♭]?)(.*)$/;
+const SLASH_RE = /^(.+)\/([A-Ga-g])([#♯b♭]?)$/;
+
+/** Put a bass note under a chord. A bass equal to the root changes nothing (C/C = C). */
+export function withBass(chord: Chord, bass: SpelledNote): Chord {
+  const pitchClass = pitchClassOf(bass);
+  if (pitchClass === chord.root.pitchClass) return chord;
+  const name = noteName(bass);
+  return {
+    ...chord,
+    symbol: `${chord.symbol}/${name}`,
+    bass: { note: bass, name, pitchClass, inChord: chord.pitchClasses.has(pitchClass) },
+    pitchClasses: new Set([...chord.pitchClasses, pitchClass]),
+  };
+}
+
+/** "1st inversion" for G/B, "added bass note" for C/D; null for ordinary chords. */
+export function bassDescription(chord: Chord): string | null {
+  if (!chord.bass) return null;
+  const tone = chord.tones.find((t) => t.pitchClass === chord.bass!.pitchClass);
+  if (!tone) return 'added bass note';
+  const deg = tone.interval.degree;
+  return deg === 3 || deg === 2 || deg === 4 ? '1st inversion' : deg === 5 ? '2nd inversion' : deg === 7 ? '3rd inversion' : `${tone.interval.name} in the bass`;
+}
 
 export function parseChord(input: string): ParseResult {
   const text = input.trim().replace(/\s+/g, '');
   if (!text) return { ok: false, error: 'Type a chord name, e.g. Dmaj7.' };
+
+  // Slash chord: "G/B", "D/F#", "Am7/G" — a chord over a bass note.
+  const slash = SLASH_RE.exec(text);
+  if (slash) {
+    const base = parseChord(slash[1]);
+    if (!base.ok) return base;
+    const acc = slash[3] === '#' || slash[3] === '♯' ? 1 : slash[3] ? -1 : 0;
+    return { ok: true, chord: withBass(base.chord, { letter: slash[2].toUpperCase() as Letter, accidental: acc }) };
+  }
+  if (text.includes('/')) {
+    return { ok: false, error: `After "/" put the bass note (A–G), e.g. G/B or D/F#.` };
+  }
 
   const match = ROOT_RE.exec(text);
   if (!match) {
@@ -118,7 +163,7 @@ export function parseChord(input: string): ParseResult {
 
 /** Look up how the chord spells a pitch class (e.g. 6 → "F#" in D major). */
 export function chordNoteName(chord: Chord, pc: number): string | undefined {
-  return chord.tones.find((t) => t.pitchClass === pc)?.name;
+  return chord.tones.find((t) => t.pitchClass === pc)?.name ?? (chord.bass?.pitchClass === pc ? chord.bass.name : undefined);
 }
 
 /**
@@ -127,5 +172,8 @@ export function chordNoteName(chord: Chord, pc: number): string | undefined {
  */
 export function chordMidiNotes(chord: Chord): number[] {
   const rootMidi = 48 + chord.root.pitchClass;
-  return chord.tones.map((t) => rootMidi + t.interval.semitones);
+  const notes = chord.tones.map((t) => rootMidi + t.interval.semitones);
+  if (!chord.bass) return notes;
+  // Slash chord: the bass sounds below the root.
+  return [rootMidi - (((chord.root.pitchClass - chord.bass.pitchClass) % 12) + 12) % 12, ...notes];
 }
